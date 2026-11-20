@@ -1,0 +1,155 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme{Madrid}
+\usecolortheme{whale}
+\setbeamertemplate{navigation symbols}{}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{amsmath}
+
+\title[Early Diabetes ML Benchmark]{Comparative Evaluation of Tree-Based, Ensemble, and Margin Classifiers for Early Diabetes Mellitus Prediction}
+\subtitle{Under Zero-Leakage Preprocessing and Class Imbalance}
+\author[M. D. Nurkolis (26917015)]{Mokhammad Dwi Nurkolis (NIM: 26917015)}
+\institute[Master of Informatics, UII]{Master of Informatics, Faculty of Industrial Technology\\Universitas Islam Indonesia\\ \texttt{halo@nurkolis.xyz}}
+\date{November 20, 2026}
+
+\begin{document}
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+\begin{frame}{1. Clinical Problem, Research Motivation \& Gaps (00:00 -- 00:45)}
+\begin{columns}[T]
+\begin{column}{0.52\textwidth}
+\textbf{Clinical Background:}
+\begin{itemize}
+    \item Type 2 Diabetes Mellitus (T2DM) requires early non-invasive risk screening to prevent retinopathy, nephropathy, and cardiovascular complications.
+    \item Benchmark: \textbf{Pima Indians Diabetes Database} (OpenML ID 37 / NIDDK, $N = 768$, $d = 8$ clinical attributes).
+\end{itemize}
+\vspace{4pt}
+\textbf{Research Questions:}
+\begin{enumerate}
+    \item \textbf{RQ1:} How do CART, Random Forest, XGBoost, and RBF-SVM compare under zero-leakage pipelines?
+    \item \textbf{RQ2:} How much do fold-internal SMOTE and tuning improve minority Recall and F1?
+    \item \textbf{RQ3:} How does structural regularization alter the bias--variance trade-off?
+\end{enumerate}
+\end{column}
+\begin{column}{0.46\textwidth}
+\begin{alertblock}{Three Flaws in Prior Studies}
+\begin{enumerate}
+    \item \textbf{Disguised Missing Data:} Biologically impossible \texttt{0} values in Insulin ($48.7\%$) and Skin Thickness ($29.6\%$) treated as real measurements.
+    \item \textbf{Accuracy Paradox:} Under $65.1\%$ vs.\ $34.9\%$ imbalance, baseline models yield high Specificity but miss $>40\%$ of diabetic patients.
+    \item \textbf{Data Leakage:} Global imputation and SMOTE prior to splitting inflate validation metrics artificially.
+\end{enumerate}
+\end{alertblock}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{2. Dataset Characteristics \& Biological Zero Audit (00:45 -- 01:35)}
+\begin{center}
+\includegraphics[width=0.80\textwidth]{../artifacts/figures/fig1_class_and_missing_audit.pdf}
+\end{center}
+\vspace{-6pt}
+\begin{itemize}
+    \item \textbf{Class Imbalance:} $500$ Non-Diabetic ($65.1\%$) vs.\ $268$ Diabetic ($34.9\%$) $\rightarrow$ ratio $1 : 1.87$.
+    \item \textbf{Distributional Distortion:} Raw Insulin mean is $79.80\text{ }\mu\text{U/mL}$, whereas valid physiological median is $125.00\text{ }\mu\text{U/mL}$ (mean $155.55$). Right-skewed outliers motivate \textbf{median imputation}.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{3. Zero-Leakage Pipeline \& 3-Stage Experimental Design (01:35 -- 02:35)}
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\textbf{Strict Anti-Leakage Architecture:}
+\begin{itemize}
+    \item \textbf{Stratified 80:20 Split First:}
+    \begin{itemize}
+        \item Train: $N = 614$ ($400$ neg, $214$ pos)
+        \item Hold-Out Test: $N = 154$ ($100$ neg, $54$ pos)
+    \end{itemize}
+    \item \textbf{Fold-Internal \texttt{imblearn.Pipeline}:}
+    \begin{enumerate}
+        \item $\Phi_{\text{zero}\to\text{NaN}}$ on 5 physiological columns
+        \item \texttt{SimpleImputer(strategy='median')}
+        \item \texttt{StandardScaler()} ($z$-score)
+        \item \texttt{SMOTE} (active \emph{only} inside training folds)
+        \item Classifier (\texttt{DT}, \texttt{RF}, \texttt{XGBoost}, \texttt{SVM})
+    \end{enumerate}
+\end{itemize}
+\end{column}
+\begin{column}{0.50\textwidth}
+\includegraphics[width=0.96\textwidth]{../artifacts/figures/fig2_correlation_heatmap.pdf}
+\vspace{-8pt}
+\begin{block}{Three Experimental Stages}
+\scriptsize
+\textbf{Exp 1 (Baseline):} Default params, no SMOTE.\\
+\textbf{Exp 2 (Imbalance):} Fold-internal SMOTE ($1:1$).\\
+\textbf{Exp 3 (Tuned+SMOTE):} 5-Fold Stratified \texttt{GridSearchCV} optimizing F1-Score \& regularization.
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{4. Quantitative Results Across All 3 Experimental Stages (02:35 -- 03:45)}
+\centering
+\resizebox{0.98\textwidth}{!}{%
+\begin{tabular}{llrrrrrrrrr}
+\toprule
+\textbf{Stage} & \textbf{Algorithm} & \textbf{Train F1} & \textbf{5-Fold CV F1} & \textbf{Test Acc} & \textbf{Test Prec} & \textbf{Test Sens} & \textbf{Test Spec} & \textbf{Test F1} & \textbf{Test AUC} & \textbf{Gap $\Delta F_1$} \\
+\midrule
+Exp 1: Baseline & Decision Tree & 1.0000 & $0.5518 \pm 0.0201$ & 0.6818 & 0.5532 & \textcolor{red}{0.4815} & 0.7900 & 0.5149 & 0.6357 & +0.4851 \\
+ & Random Forest & 1.0000 & $0.6330 \pm 0.0192$ & \textbf{0.7727} & \textbf{0.7021} & 0.6111 & \textbf{0.8600} & 0.6535 & 0.8181 & +0.3465 \\
+ & XGBoost & 1.0000 & $0.6117 \pm 0.0183$ & 0.7662 & 0.6957 & 0.5926 & \textbf{0.8600} & 0.6400 & 0.8057 & +0.3600 \\
+ & SVM (RBF) & 0.7461 & $0.6485 \pm 0.0187$ & 0.7403 & 0.6522 & 0.5556 & 0.8400 & 0.6000 & 0.7964 & +0.1461 \\
+\midrule
+Exp 2: SMOTE & Decision Tree & 1.0000 & $0.6144 \pm 0.0100$ & 0.7013 & 0.5690 & 0.6111 & 0.7500 & 0.5893 & 0.6806 & +0.4107 \\
+ & Random Forest & 1.0000 & $0.6683 \pm 0.0356$ & 0.7532 & 0.6333 & 0.7037 & 0.7800 & 0.6667 & 0.8139 & +0.3333 \\
+ & XGBoost & 1.0000 & $0.6063 \pm 0.0277$ & 0.7338 & 0.6140 & 0.6481 & 0.7800 & 0.6306 & 0.8106 & +0.3694 \\
+ & SVM (RBF) & 0.7930 & $0.6854 \pm 0.0432$ & 0.7273 & 0.5968 & 0.6852 & 0.7500 & 0.6379 & 0.8112 & +0.1551 \\
+\midrule
+\textbf{Exp 3: Tuned} & \textbf{Decision Tree} & 0.7214 & $0.6739 \pm 0.0246$ & 0.7662 & 0.6324 & \textbf{0.7963} & \textbf{0.7500} & \textbf{0.7049} & 0.8012 & \textbf{+0.0165} \\
+\textbf{+ SMOTE} & \textbf{Random Forest} & 0.8358 & $0.7112 \pm 0.0154$ & 0.7338 & 0.5890 & \textbf{0.7963} & 0.7000 & 0.6772 & 0.8146 & +0.1587 \\
+ & \textbf{XGBoost} & 0.7531 & \textbf{0.7121 $\pm$ 0.0209} & 0.7338 & 0.5915 & 0.7778 & 0.7100 & 0.6720 & \textbf{0.8224} & +0.0811 \\
+ & \textbf{SVM (RBF)} & 0.7043 & $0.6956 \pm 0.0091$ & 0.7273 & 0.5882 & 0.7407 & 0.7200 & 0.6557 & 0.8078 & +0.0486 \\
+\bottomrule
+\end{tabular}%
+}
+\vspace{3pt}
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\centering
+\includegraphics[width=0.90\textwidth]{../artifacts/figures/fig4_roc_pr_curves.pdf}
+\end{column}
+\begin{column}{0.48\textwidth}
+\centering
+\includegraphics[width=0.90\textwidth]{../artifacts/figures/fig6_feature_importance.pdf}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{5. Bias--Variance Analysis, Confusion Matrices \& Conclusion (03:45 -- 05:00)}
+\begin{columns}[T]
+\begin{column}{0.47\textwidth}
+\centering
+\includegraphics[width=0.73\textwidth]{../artifacts/figures/fig3_confusion_matrices.pdf}
+\vspace{2pt}
+
+\scriptsize
+\textbf{False Negatives Cut by $>60\%$:} From $28$ missed patients (Baseline DT) down to $11$ (Tuned DT/RF) and $12$ (Tuned XGBoost).
+\end{column}
+\begin{column}{0.51\textwidth}
+\centering
+\includegraphics[width=0.73\textwidth]{../artifacts/figures/fig5_learning_curves_bias_variance.pdf}
+\vspace{1pt}
+
+\scriptsize
+\begin{itemize}
+    \item \textbf{Overfitting Resolved:} Pruning (\texttt{max\_depth=4}) \& $L_2$ regularization (\texttt{reg\_lambda=5.0}) cut Train-Test F1 gaps from $0.36$--$0.48$ down to $0.0165$ (DT) and $0.0811$ (XGB).
+    \item \textbf{Best Overall Risk Ranking:} \textbf{Tuned XGBoost} (CV F1 $= 0.7121$, ROC-AUC $= 0.8224$, PR-AUC $= 0.7125$).
+    \item \textbf{Best Interpretable Rule:} \textbf{Tuned Decision Tree} (Test F1 $= 0.7049$, Sens $= 79.63\%$, Spec $= 75.00\%$).
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\end{document}

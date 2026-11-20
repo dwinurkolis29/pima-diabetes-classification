@@ -1,0 +1,24 @@
+# Python virtual environment and bytecode
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# LaTeX build artifacts (keep final PDF and source .tex/.bib/.cls)
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+
+# OS / IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

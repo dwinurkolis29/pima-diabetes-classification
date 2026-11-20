@@ -1,171 +1,222 @@
-\documentclass[aspectratio=169,10pt]{beamer}
-\usetheme{Madrid}
-\usecolortheme{whale}
-\setbeamertemplate{navigation symbols}{}
+\documentclass[aspectratio=169,11pt]{beamer}
+
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage{helvet}
+  \renewcommand{\familydefault}{\sfdefault}
+\else
+  \usepackage{fontspec}
+  \setmainfont{texgyreheros-regular.otf}[BoldFont=texgyreheros-bold.otf,ItalicFont=texgyreheros-italic.otf,BoldItalicFont=texgyreheros-bolditalic.otf]
+  \setsansfont{texgyreheros-regular.otf}[BoldFont=texgyreheros-bold.otf,ItalicFont=texgyreheros-italic.otf,BoldItalicFont=texgyreheros-bolditalic.otf]
+  \setmonofont{texgyrecursor-regular.otf}[BoldFont=texgyrecursor-bold.otf,ItalicFont=texgyrecursor-italic.otf,BoldItalicFont=texgyrecursor-bolditalic.otf,Scale=MatchLowercase]
+\fi
+\usepackage[indonesian]{babel}
 \usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage{amsmath}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,backgrounds}
 
-\title[Early Diabetes ML Benchmark]{Comparative Evaluation of Tree-Based, Ensemble, and Margin Classifiers for Early Diabetes Mellitus Prediction}
-\subtitle{Under Zero-Leakage Preprocessing and Class Imbalance}
-\author[M. D. Nurkolis (26917015)]{Mokhammad Dwi Nurkolis (NIM: 26917015)}
-\institute[Master of Informatics, UII]{Master of Informatics, Faculty of Industrial Technology\\Universitas Islam Indonesia\\ \texttt{halo@nurkolis.xyz}}
-\date{November 20, 2026}
+% ---------- palette and theme ----------
+\definecolor{navy}{HTML}{1F3A5F}
+\definecolor{accent}{HTML}{E4572E}
+\definecolor{blu}{HTML}{4C78A8}
+\definecolor{gry}{HTML}{6B7280}
+\setbeamercolor{normal text}{fg=black!85}
+\setbeamercolor{frametitle}{fg=navy}
+\setbeamercolor{itemize item}{fg=accent}
+\setbeamercolor{itemize subitem}{fg=accent}
+\setbeamercolor{enumerate item}{fg=accent}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize item}[circle]
+\setbeamertemplate{frametitle}{%
+  \vspace{0.35cm}\par\noindent
+  {\bfseries\large\color{navy}\insertframetitle\par}%
+  \vspace{-0.15cm}{\color{accent}\rule{2.2cm}{2pt}}\par}
+\setbeamertemplate{footline}{%
+  \hfill{\scriptsize\color{gry}M. D. Nurkolis \;|\; Magister Informatika UII \;|\; \insertframenumber}\hspace{0.6cm}\vspace{0.3cm}}
+\setbeamerfont{itemize/enumerate body}{size=\normalsize}
+
+% card: width, colour, title, body
+\newcommand{\card}[4]{%
+  \begin{tikzpicture}[baseline=(card.north)]
+    \node[draw=#2, line width=1.2pt, rounded corners=4pt, fill=#2!8,
+          inner sep=8pt, anchor=north west] (card)
+      {\begin{minipage}[t][3.1cm][t]{#1}\raggedright\hyphenpenalty=10000\exhyphenpenalty=10000
+       {\bfseries\color{#2}#3}\par\vspace{4pt}#4\end{minipage}};
+  \end{tikzpicture}}
+
+\title{Prediksi Diabetes dengan Machine Learning tanpa Kebocoran Data}
+\author{Mokhammad Dwi Nurkolis (NIM 26917015)}
+\institute{Magister Informatika, Universitas Islam Indonesia}
+\date{20 November 2026}
 
 \begin{document}
 
-\begin{frame}
-\titlepage
+% ---------- 1. Title ----------
+\begin{frame}[plain]
+  \vspace*{1.6cm}
+  {\color{navy}\bfseries\LARGE Prediksi Diabetes dengan Machine Learning\\tanpa Kebocoran Data\par}
+  \vspace{0.3cm}{\color{accent}\rule{3cm}{2.5pt}}\par\vspace{0.4cm}
+  {\large Decision Tree, Random Forest, XGBoost, dan SVM pada dataset Pima Indians (768 pasien)\par}
+  \vspace{1.0cm}
+  {\bfseries Mokhammad Dwi Nurkolis} (NIM 26917015)\\
+  Magister Informatika, Fakultas Teknologi Industri\\
+  Universitas Islam Indonesia \;|\; 20 November 2026
 \end{frame}
 
-\begin{frame}{1. Clinical Problem, Research Motivation \& Gaps (00:00 -- 00:45)}
-\begin{columns}[T]
-\begin{column}{0.52\textwidth}
-\textbf{Clinical Background:}
-\begin{itemize}
-    \item Type 2 Diabetes Mellitus (T2DM) requires early non-invasive risk screening to prevent retinopathy, nephropathy, and cardiovascular complications.
-    \item Benchmark: \textbf{Pima Indians Diabetes Database} (OpenML ID 37 / NIDDK, $N = 768$, $d = 8$ clinical attributes).
-\end{itemize}
-\vspace{4pt}
-\textbf{Research Questions:}
-\begin{enumerate}
-    \item \textbf{RQ1:} How do CART, Random Forest, XGBoost, and RBF-SVM compare under zero-leakage pipelines?
-    \item \textbf{RQ2:} How much do fold-internal SMOTE and tuning improve minority Recall and F1?
-    \item \textbf{RQ3:} How does structural regularization alter the bias--variance trade-off?
-\end{enumerate}
-\end{column}
-\begin{column}{0.46\textwidth}
-\begin{alertblock}{Three Flaws in Prior Studies}
-\begin{enumerate}
-    \item \textbf{Disguised Missing Data:} Biologically impossible \texttt{0} values in Insulin ($48.7\%$) and Skin Thickness ($29.6\%$) treated as real measurements.
-    \item \textbf{Accuracy Paradox:} Under $65.1\%$ vs.\ $34.9\%$ imbalance, baseline models yield high Specificity but miss $>40\%$ of diabetic patients.
-    \item \textbf{Data Leakage:} Global imputation and SMOTE prior to splitting inflate validation metrics artificially.
-\end{enumerate}
-\end{alertblock}
-\end{column}
-\end{columns}
+% ---------- 2. Problem ----------
+\begin{frame}{Akurasi tinggi belum berarti aman untuk skrining diabetes}
+  Studi sebelumnya pada dataset ini sering mengabaikan tiga hal:
+  \vspace{0.4cm}
+
+  \card{0.27\textwidth}{accent}{1. Nilai 0 yang mustahil}{Insulin bernilai 0 pada \textbf{48{,}7\%} pasien. Itu data hilang, bukan hasil ukur.}
+  \hfill
+  \card{0.27\textwidth}{blu}{2. Kelas tidak seimbang}{\textbf{65\%} sehat dan \textbf{35\%} diabetes. Model cenderung melewatkan pasien diabetes.}
+  \hfill
+  \card{0.27\textwidth}{navy}{3. Kebocoran data}{Imputasi atau SMOTE sebelum pembagian data membuat skor tampak lebih baik dari kenyataan.}
 \end{frame}
 
-\begin{frame}{2. Dataset Characteristics \& Biological Zero Audit (00:45 -- 01:35)}
-\begin{center}
-\includegraphics[width=0.80\textwidth]{../artifacts/figures/fig1_class_and_missing_audit.pdf}
-\end{center}
-\vspace{-6pt}
-\begin{itemize}
-    \item \textbf{Class Imbalance:} $500$ Non-Diabetic ($65.1\%$) vs.\ $268$ Diabetic ($34.9\%$) $\rightarrow$ ratio $1 : 1.87$.
-    \item \textbf{Distributional Distortion:} Raw Insulin mean is $79.80\text{ }\mu\text{U/mL}$, whereas valid physiological median is $125.00\text{ }\mu\text{U/mL}$ (mean $155.55$). Right-skewed outliers motivate \textbf{median imputation}.
-\end{itemize}
+% ---------- 3. Data ----------
+\begin{frame}{Hampir separuh nilai insulin sebenarnya hilang}
+  \begin{center}
+    \includegraphics[height=0.58\textheight]{../artifacts/figures/fig1_class_and_missing_audit.pdf}
+  \end{center}
+  \vspace{-0.2cm}
+  \begin{itemize}
+    \item Nilai 0 pada lima fitur diubah menjadi \texttt{NaN}, lalu diisi \textbf{median} (distribusi miring ke kanan).
+    \item Rata-rata insulin mentah 79,8; rata-rata nilai valid 155,6.
+  \end{itemize}
 \end{frame}
 
-\begin{frame}{3. Zero-Leakage Pipeline \& 3-Stage Design (01:35 -- 02:35)}
-\begin{columns}[T]
-\begin{column}{0.48\textwidth}
-\textbf{Strict Anti-Leakage Architecture:}
-\begin{itemize}
-    \item \textbf{Stratified 80:20 Split First:}
-    \begin{itemize}
-        \item Train: $N = 614$ ($400$ neg, $214$ pos)
-        \item Hold-Out Test: $N = 154$ ($100$ neg, $54$ pos)
-    \end{itemize}
-    \item \textbf{Fold-Internal \texttt{imblearn.Pipeline}:}
-    \begin{enumerate}
-        \item $\Phi_{\text{zero}\to\text{NaN}}$ on 5 physiological columns
-        \item \texttt{SimpleImputer(strategy='median')}
-        \item \texttt{StandardScaler()} ($z$-score)
-        \item \texttt{SMOTE} (active \emph{only} inside training folds)
-        \item Classifier (\texttt{DT}, \texttt{RF}, \texttt{XGBoost}, \texttt{SVM})
-    \end{enumerate}
-\end{itemize}
-\end{column}
-\begin{column}{0.50\textwidth}
-\includegraphics[width=0.96\textwidth]{../artifacts/figures/fig2_correlation_heatmap.pdf}
-\vspace{-6pt}
-\begin{block}{Three Experimental Stages}
-\scriptsize
-\textbf{Exp 1 (Baseline):} Default params, no SMOTE.\\
-\textbf{Exp 2 (Imbalance):} Fold-internal SMOTE ($1:1$).\\
-\textbf{Exp 3 (Tuned+SMOTE):} 5-Fold Stratified \texttt{GridSearchCV} optimizing F1-Score \& regularization.
-\end{block}
-\end{column}
-\end{columns}
+% ---------- 4. Pipeline ----------
+\begin{frame}{Semua langkah dipelajari hanya dari data latih}
+  \begin{itemize}
+    \item Data dibagi \textbf{80:20} lebih dulu: 614 pasien latih, 154 pasien uji.
+    \item Data uji tidak disentuh saat preprocessing maupun tuning.
+  \end{itemize}
+  \vspace{0.5cm}
+  \begin{center}
+  \begin{tikzpicture}[
+      box/.style={draw=navy, fill=navy!8, rounded corners=3pt, minimum height=1.2cm,
+                  minimum width=2.2cm, align=center, font=\small},
+      arr/.style={-{Stealth}, thick, color=navy}]
+    \node[box] (a) {Ubah\\0 $\to$ NaN};
+    \node[box, right=0.4cm of a] (b) {Imputasi\\median};
+    \node[box, right=0.4cm of b] (c) {Skala\\z-score};
+    \node[box, right=0.4cm of c, fill=accent!15, draw=accent] (d) {SMOTE\\(hanya latih)};
+    \node[box, right=0.4cm of d] (e) {Model};
+    \draw[arr] (a)--(b); \draw[arr] (b)--(c); \draw[arr] (c)--(d); \draw[arr] (d)--(e);
+    \begin{scope}[on background layer]
+      \node[draw=gry, dashed, rounded corners=5pt, fit=(a)(e), inner sep=8pt,
+            label={[font=\small, text=gry]above:di dalam setiap fold latih (CV 5-fold)}] {};
+    \end{scope}
+  \end{tikzpicture}
+  \end{center}
+  \vspace{0.3cm}
+  Validasi dan pengujian memakai \textbf{data asli saja}; sampel sintetis tidak pernah muncul di sana.
 \end{frame}
 
-\begin{frame}{4. Quantitative Benchmark Results Across 3 Stages (02:35 -- 03:15)}
-\centering
-\resizebox{0.98\textwidth}{!}{%
-\begin{tabular}{llrrrrrrrrr}
-\toprule
-\textbf{Stage} & \textbf{Algorithm} & \textbf{Train F1} & \textbf{5-Fold CV F1} & \textbf{Test Acc} & \textbf{Test Prec} & \textbf{Test Sens} & \textbf{Test Spec} & \textbf{Test F1} & \textbf{Test AUC} & \textbf{Gap $\Delta F_1$} \\
-\midrule
-Exp 1: Baseline & Decision Tree & 1.0000 & $0.5518 \pm 0.0201$ & 0.6818 & 0.5532 & \textcolor{red}{0.4815} & 0.7900 & 0.5149 & 0.6357 & +0.4851 \\
- & Random Forest & 1.0000 & $0.6330 \pm 0.0192$ & \textbf{0.7727} & \textbf{0.7021} & 0.6111 & \textbf{0.8600} & 0.6535 & 0.8181 & +0.3465 \\
- & XGBoost & 1.0000 & $0.6117 \pm 0.0183$ & 0.7662 & 0.6957 & 0.5926 & \textbf{0.8600} & 0.6400 & 0.8057 & +0.3600 \\
- & SVM (RBF) & 0.7461 & $0.6485 \pm 0.0187$ & 0.7403 & 0.6522 & 0.5556 & 0.8400 & 0.6000 & 0.7964 & +0.1461 \\
-\midrule
-Exp 2: SMOTE & Decision Tree & 1.0000 & $0.6144 \pm 0.0100$ & 0.7013 & 0.5690 & 0.6111 & 0.7500 & 0.5893 & 0.6806 & +0.4107 \\
- & Random Forest & 1.0000 & $0.6683 \pm 0.0356$ & 0.7532 & 0.6333 & 0.7037 & 0.7800 & 0.6667 & 0.8139 & +0.3333 \\
- & XGBoost & 1.0000 & $0.6063 \pm 0.0277$ & 0.7338 & 0.6140 & 0.6481 & 0.7800 & 0.6306 & 0.8106 & +0.3694 \\
- & SVM (RBF) & 0.7930 & $0.6854 \pm 0.0432$ & 0.7273 & 0.5968 & 0.6852 & 0.7500 & 0.6379 & 0.8112 & +0.1551 \\
-\midrule
-\textbf{Exp 3: Tuned} & \textbf{Decision Tree} & 0.7214 & $0.6739 \pm 0.0246$ & 0.7662 & 0.6324 & \textbf{0.7963} & \textbf{0.7500} & \textbf{0.7049} & 0.8012 & \textbf{+0.0165} \\
-\textbf{+ SMOTE} & \textbf{Random Forest} & 0.8358 & \textbf{0.7112 $\pm$ 0.0154} & 0.7338 & 0.5890 & \textbf{0.7963} & 0.7000 & 0.6772 & 0.8146 & +0.1587 \\
- & \textbf{XGBoost} & 0.7615 & $0.7078 \pm 0.0217$ & 0.7338 & 0.5890 & \textbf{0.7963} & 0.7000 & 0.6772 & \textbf{0.8180} & +0.0843 \\
- & \textbf{SVM (RBF)} & 0.7043 & $0.6956 \pm 0.0091$ & 0.7273 & 0.5882 & 0.7407 & 0.7200 & 0.6557 & 0.8078 & +0.0486 \\
-\bottomrule
-\end{tabular}%
-}
-\vspace{6pt}
-\begin{block}{Key Quantitative Progression}
-\footnotesize
-\begin{itemize}
-    \item \textbf{Exp 1 (Accuracy Paradox):} High Specificity ($0.79$--$0.86$) masks low Sensitivity ($0.4815$--$0.6111$) and severe tree overfitting ($\Delta F_1 = +0.3465$ to $+0.4851$).
-    \item \textbf{Exp 2 (Fold-Internal SMOTE):} Immediately boosts minority Recall across every paradigm ($+9.26$ to $+12.96$ pp) without data leakage.
-    \item \textbf{Exp 3 (Tuned + SMOTE):} \textbf{XGBoost} leads ROC-AUC ($0.8180$) and PR-AUC ($0.7077$) with \textbf{Random Forest} leading CV F1 ($0.7112$); \textbf{Decision Tree} achieves top Test F1 ($0.7049$), Sensitivity ($79.63\%$), and smallest gap ($+0.0165$).
-\end{itemize}
-\end{block}
+% ---------- 5. Design ----------
+\begin{frame}{Tiga tahap eksperimen memisahkan pengaruh tiap perbaikan}
+  \card{0.27\textwidth}{gry}{Exp. 1: Baseline}{Parameter bawaan.\\Tanpa SMOTE.}
+  \hfill
+  \card{0.27\textwidth}{blu}{Exp. 2: + SMOTE}{SMOTE di dalam fold latih.\\Parameter bawaan.}
+  \hfill
+  \card{0.27\textwidth}{accent}{Exp. 3: + Tuning}{SMOTE dan GridSearchCV 5-fold, dengan F1 sebagai target.}
+  \vspace{0.5cm}
+
+  Empat model: Decision Tree \;$\cdot$\; Random Forest \;$\cdot$\; XGBoost \;$\cdot$\; SVM (RBF)
 \end{frame}
 
-\begin{frame}{5. Confusion Matrices \& ROC/PR Discrimination (03:15 -- 03:55)}
-\begin{columns}[T]
-\begin{column}{0.46\textwidth}
-\centering
-\includegraphics[width=0.92\textwidth]{../artifacts/figures/fig3_confusion_matrices.pdf}
-\end{column}
-\begin{column}{0.52\textwidth}
-\centering
-\includegraphics[width=0.98\textwidth]{../artifacts/figures/fig4_roc_pr_curves.pdf}
-\vspace{4pt}
-\begin{block}{Clinical Error \& Ranking Takeaways}
-\footnotesize
-\begin{itemize}
-    \item \textbf{False Negatives Cut by $>60\%$:} Missed diabetic cases drop from $28/54$ (Baseline DT) to $11/54$ across all three tuned tree models (DT, RF, XGBoost).
-    \item \textbf{Threshold-Independent Ranking:} Tuned XGBoost dominates both ROC-AUC ($0.818$) and step-wise PR-AUC ($0.708$ vs.\ $0.351$ prevalence baseline).
-\end{itemize}
-\end{block}
-\end{column}
-\end{columns}
+% ---------- 6. Result: sensitivity ----------
+\begin{frame}{Sensitivity naik dari 0,48--0,61 menjadi 0,74--0,80}
+  \begin{center}
+    \includegraphics[height=0.66\textheight]{../artifacts/figures/slides/s_sensitivity_by_stage.pdf}
+  \end{center}
+  \vspace{-0.2cm}
+  Hasil pada 154 pasien uji (54 diabetes). Spesifisitas turun dari 0,79--0,86 menjadi 0,70--0,75.
 \end{frame}
 
-\begin{frame}{6. Bias--Variance, Feature Importance \& Conclusion (03:55 -- 05:00)}
-\begin{columns}[T]
-\begin{column}{0.49\textwidth}
-\centering
-\includegraphics[width=0.94\textwidth]{../artifacts/figures/fig5_learning_curves_bias_variance.pdf}
-\end{column}
-\begin{column}{0.49\textwidth}
-\centering
-\includegraphics[width=0.98\textwidth]{../artifacts/figures/fig6_feature_importance.pdf}
-\vspace{2pt}
-\begin{block}{Conclusion \& Model Selection}
-\scriptsize
-\begin{itemize}
-    \item \textbf{Overfitting Resolved:} Pruning (\texttt{max\_depth=4}) \& regularization (\texttt{max\_depth=3}, \texttt{reg\_lambda=5.0}) cut Train--Test F1 gaps from $0.35$--$0.49$ down to $0.0165$ (DT) and $0.0843$ (XGB); \textbf{Glucose}, \textbf{BMI}, and \textbf{Age} lead consistently.
-    \item \textbf{Best Risk Ranking:} \textbf{Tuned XGBoost} (ROC-AUC $= 0.8180$, PR-AUC $= 0.7077$, Sens $= 79.63\%$, CV F1 $= 0.7078$).
-    \item \textbf{Best Interpretable Rule:} \textbf{Tuned Decision Tree} (Test F1 $= 0.7049$, Sens $= 79.63\%$, Spec $= 75.00\%$).
-\end{itemize}
-\end{block}
-\end{column}
-\end{columns}
+% ---------- 7. Result: missed patients ----------
+\begin{frame}{Pasien terlewat turun dari 28 menjadi 11 pada Decision Tree}
+  \begin{center}
+    \includegraphics[height=0.66\textheight]{../artifacts/figures/slides/s_missed_patients.pdf}
+  \end{center}
+  \vspace{-0.2cm}
+  Kesalahan yang paling berbahaya secara klinis, yaitu \emph{false negative}, berkurang pada semua model.
+\end{frame}
+
+% ---------- 8. Overfitting ----------
+\begin{frame}{Regularisasi menekan overfitting pada model berbasis pohon}
+  \begin{center}
+    \includegraphics[height=0.62\textheight]{../artifacts/figures/slides/s_overfit_gap.pdf}
+  \end{center}
+  \vspace{-0.2cm}
+  Tanpa pembatasan, F1 latih mencapai 1,00 pada pohon, forest, dan XGBoost. Setelah tuning, selisihnya 0,02--0,16.
+\end{frame}
+
+% ---------- 9. Model choice ----------
+\begin{frame}{Model terbaik bergantung pada kebutuhan}
+  \card{0.40\textwidth}{blu}{XGBoost: peringkat risiko}{ROC-AUC \textbf{0,818}, PR-AUC \textbf{0,708}.\\Sensitivity 0,796, CV F1 0,708, selisih train--test 0,084.}
+  \hfill
+  \card{0.40\textwidth}{accent}{Decision Tree (depth 4): aturan transparan}{F1 uji \textbf{0,705}, sensitivity 0,796, spesifisitas 0,750.\\Selisih train--test hanya 0,017.}
+  \vspace{0.4cm}
+
+  \textbf{Catatan:} data uji hanya memuat 54 pasien diabetes dan interval kepercayaan 95\% saling tumpang tindih. Perbedaan antarmodel tuned bersifat indikatif.
+\end{frame}
+
+% ---------- 10. Conclusion ----------
+\begin{frame}{Kesimpulan}
+  \begin{enumerate}
+    \item Nilai 0 yang mustahil harus ditangani \textbf{di dalam} pipeline agar tidak ada kebocoran.
+    \item Baseline tampak akurat (spesifisitas tinggi) tetapi melewatkan 39--52\% pasien diabetes.
+    \item SMOTE di dalam fold dan tuning menaikkan sensitivity ke 0,74--0,80 dan menekan overfitting.
+    \item Gunakan \textbf{XGBoost} untuk peringkat risiko dan \textbf{Decision Tree} untuk aturan yang mudah dijelaskan.
+  \end{enumerate}
+  \vspace{0.4cm}
+  {\color{gry}\small Langkah berikutnya: nested CV, imputasi multivariat (MICE), kalibrasi probabilitas, dan validasi pada data multi-pusat.}
+\end{frame}
+
+% ---------- Backup ----------
+\appendix
+
+\begin{frame}{Cadangan: hasil Exp. 3 secara lengkap}
+  \centering
+  \small
+  \begin{tabular}{lrrrrrrr}
+    \toprule
+    Model & CV F1 & Sens & Spec & F1 & ROC-AUC & PR-AUC & Selisih \\
+    \midrule
+    Decision Tree & 0,674 & \textbf{0,796} & \textbf{0,750} & \textbf{0,705} & 0,801 & 0,644 & \textbf{0,017} \\
+    Random Forest & \textbf{0,711} & \textbf{0,796} & 0,700 & 0,677 & 0,815 & 0,697 & 0,159 \\
+    XGBoost & 0,708 & \textbf{0,796} & 0,700 & 0,677 & \textbf{0,818} & \textbf{0,708} & 0,084 \\
+    SVM (RBF) & 0,696 & 0,741 & 0,720 & 0,656 & 0,808 & 0,694 & 0,049 \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.4cm}
+  {\footnotesize Tebal = terbaik pada kolom. Selisih = F1 latih $-$ F1 uji. Tabel lengkap tiga tahap ada pada makalah.}
+\end{frame}
+
+\begin{frame}{Cadangan: kurva belajar (bias--variance)}
+  \begin{center}
+    \includegraphics[height=0.74\textheight]{../artifacts/figures/fig5_learning_curves_bias_variance.pdf}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Cadangan: fitur yang paling berpengaruh}
+  \begin{center}
+    \includegraphics[width=0.92\textwidth]{../artifacts/figures/fig6_feature_importance.pdf}
+  \end{center}
+  Glucose, BMI, dan Age dominan pada semua model.
+\end{frame}
+
+\begin{frame}{Cadangan: confusion matrix model tuned}
+  \begin{center}
+    \includegraphics[height=0.74\textheight]{../artifacts/figures/fig3_confusion_matrices.pdf}
+  \end{center}
 \end{frame}
 
 \end{document}

@@ -26,10 +26,6 @@ def run_all_experiments(
     results_dir.mkdir(parents=True, exist_ok=True)
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state)
 
-    neg_count = int((y_train == 0).sum())
-    pos_count = int((y_train == 1).sum())
-    scale_pos_weight = round(neg_count / pos_count, 4)
-
     all_metrics = []
     fitted_pipelines: Dict[str, Dict[str, Any]] = {
         "Exp1_Baseline": {},
@@ -194,7 +190,6 @@ def run_all_experiments(
         best_params_summary[model_name] = {
             "best_cv_f1": round(float(grid.best_score_), 4),
             "best_params": grid.best_params_,
-            "scale_pos_weight_reference": scale_pos_weight,
         }
 
         metrics = evaluate_fitted_pipeline(

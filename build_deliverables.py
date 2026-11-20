@@ -5,8 +5,12 @@
 """
 
 from pathlib import Path
+import platform
 import shutil
+import stat
 import subprocess
+import sys
+import tarfile
 import urllib.request
 import zipfile
 import nbformat
@@ -45,7 +49,12 @@ def build_and_execute_colab_notebook() -> Path:
         new_code_cell(
             "# Cell 1: Environment Setup & Reproducibility Configuration\n"
             "import warnings\n"
-            "warnings.filterwarnings('ignore')\n\n"
+            "warnings.filterwarnings(\n"
+            "    'ignore',\n"
+            "    message=r'The `probability` parameter was deprecated.*',\n"
+            "    category=FutureWarning,\n"
+            "    module=r'sklearn\\.svm\\._base',\n"
+            ")\n\n"
             "import json\n"
             "import numpy as np\n"
             "import pandas as pd\n"
@@ -160,7 +169,7 @@ def build_and_execute_colab_notebook() -> Path:
             "bars2 = axes[1].barh(bio_sub['Feature'], bio_sub['Invalid_Zero_Pct (%)'], color='#c0392b', edgecolor='black', height=0.55)\n"
             "axes[1].set_title('(b) Biologically Impossible Zero Values Encoded as Missing', fontweight='bold')\n"
             "axes[1].set_xlabel('Percentage of Samples (%)')\n"
-            "axes[1].set_xlim(0, 60)\n"
+            "axes[1].set_xlim(0, 68)\n"
             "for b, (_, r) in zip(bars2, bio_sub.iterrows()):\n"
             "    axes[1].text(r['Invalid_Zero_Pct (%)'] + 1.0, b.get_y() + b.get_height()/2, f\"{int(r['Invalid_Zero_Count'])} ({r['Invalid_Zero_Pct (%)']:.1f}%)\", va='center', fontweight='bold')\n"
             "plt.tight_layout()\n"
@@ -188,10 +197,12 @@ def build_and_execute_colab_notebook() -> Path:
             "for c in top_feats:\n"
             "    norm_df[c] = (norm_df[c] - norm_df[c].mean()) / norm_df[c].std()\n"
             "melted = norm_df.melt(id_vars='Outcome', value_vars=top_feats, var_name='Feature', value_name='Z_Score')\n"
+            "melted['Feature'] = melted['Feature'].replace({'DiabetesPedigreeFunction': 'Diabetes\\nPedigree'})\n"
             "melted['Diagnosis'] = melted['Outcome'].map({0: 'Non-Diabetic (0)', 1: 'Diabetic (1)'})\n"
-            "sns.boxplot(data=melted, x='Feature', y='Z_Score', hue='Diagnosis', palette={'Non-Diabetic (0)': '#2b5c8f', 'Diabetic (1)': '#d95f02'}, ax=axes[1])\n"
+            "sns.boxplot(data=melted, x='Feature', y='Z_Score', hue='Diagnosis', order=['Glucose', 'BMI', 'Age', 'Diabetes\\nPedigree'], hue_order=['Non-Diabetic (0)', 'Diabetic (1)'], palette={'Non-Diabetic (0)': '#2b5c8f', 'Diabetic (1)': '#d95f02'}, ax=axes[1])\n"
             "axes[1].set_title('(b) Standardized Distribution of Key Predictors by Outcome', fontweight='bold')\n"
             "axes[1].set_ylabel('Standardized Value (Z-Score)')\n"
+            "axes[1].legend(loc='upper left')\n"
             "plt.tight_layout()\n"
             "plt.show()"
         ),
@@ -214,7 +225,11 @@ def build_and_execute_colab_notebook() -> Path:
             "    def __init__(self, columns=None):\n"
             "        self.columns = columns\n\n"
             "    def fit(self, X, y=None):\n"
-            "        self.columns_ = self.columns if self.columns is not None else BIOLOGICAL_ZERO_COLUMNS\n"
+            "        self.columns_ = list(self.columns) if self.columns is not None else list(BIOLOGICAL_ZERO_COLUMNS)\n"
+            "        if isinstance(X, pd.DataFrame):\n"
+            "            self.column_indices_ = [X.columns.get_loc(col) for col in self.columns_ if col in X.columns]\n"
+            "        else:\n"
+            "            self.column_indices_ = [FEATURE_COLUMNS.index(col) for col in self.columns_ if col in FEATURE_COLUMNS]\n"
             "        return self\n\n"
             "    def transform(self, X):\n"
             "        if isinstance(X, pd.DataFrame):\n"
@@ -224,8 +239,9 @@ def build_and_execute_colab_notebook() -> Path:
             "                    X_out[col] = X_out[col].replace(0, np.nan)\n"
             "            return X_out.to_numpy(dtype=float)\n"
             "        X_arr = np.array(X, dtype=float, copy=True)\n"
-            "        for idx in [1, 2, 3, 4, 5]:\n"
-            "            X_arr[X_arr[:, idx] == 0, idx] = np.nan\n"
+            "        for idx in self.column_indices_:\n"
+            "            if idx < X_arr.shape[1]:\n"
+            "                X_arr[X_arr[:, idx] == 0, idx] = np.nan\n"
             "        return X_arr\n\n"
             "def build_pipeline(classifier, use_smote=False, smote_ratio=1.0, smote_k=5):\n"
             "    steps = [\n"
@@ -365,8 +381,8 @@ def build_and_execute_colab_notebook() -> Path:
             "The experimental benchmark table demonstrates three critical findings:\n"
             "1. **Baseline Failure Mode (`Exp1_Baseline`):** Without class imbalance mitigation, all models heavily favor the majority non-diabetic class. Although Specificity is high ($0.7900$–$0.8600$), Sensitivity (Recall) is unacceptably low for clinical screening: Decision Tree detects only $48.15\\%$ of diabetic patients ($26/54$), SVM detects $55.56\\%$ ($30/54$), XGBoost detects $59.26\\%$ ($32/54$), and Random Forest detects $61.11\\%$ ($33/54$). Moreover, all three baseline tree models have `Train_F1 = 1.0000`, resulting in severe overfitting gaps (`Gap_Train_Test_F1` between $0.3465$ and $0.4851$).\n"
             "2. **Effect of Fold-Internal SMOTE (`Exp2_SMOTE`):** Introducing SMOTE inside the training folds immediately lifts Sensitivity across all four paradigms: Decision Tree jumps to $61.11\\%$, Random Forest to $70.37\\%$, XGBoost to $64.81\\%$, and SVM to $68.52\\%$.\n"
-            "3. **Synergy of Regularization Tuning + SMOTE (`Exp3_Tuned`):** Optimizing structural capacity (`max_depth=4, min_samples_leaf=15` for Decision Tree; `max_depth=4, learning_rate=0.03, reg_lambda=5.0` for XGBoost; `C=0.5, gamma=0.03` for SVM) dramatically reduces the train-test generalization gap while elevating Sensitivity to **$74.07\\%$–$79.63\\%$**.\n"
-            "   - **XGBoost (Tuned)** achieves the highest 5-Fold CV F1 ($0.7121 \\pm 0.0209$), the highest Test ROC-AUC ($0.8224$), and the highest Test PR-AUC ($0.7125$).\n"
+            "3. **Synergy of Regularization Tuning + SMOTE (`Exp3_Tuned`):** Optimizing structural capacity (`max_depth=4, min_samples_leaf=15` for Decision Tree; `max_depth=3, n_estimators=150, learning_rate=0.03, reg_lambda=5.0, min_child_weight=2` for XGBoost; `C=0.5, gamma=0.03` for SVM) dramatically reduces the train-test generalization gap while elevating Sensitivity to **$74.07\\%$–$79.63\\%$**.\n"
+            "   - **Random Forest (Tuned)** achieves the highest 5-Fold CV F1 ($0.7112 \\pm 0.0154$), closely followed by **XGBoost (Tuned)** ($0.7078 \\pm 0.0217$), which delivers the highest Test ROC-AUC ($0.8180$) and the highest Test PR-AUC ($0.7077$) alongside $79.63\\%$ Sensitivity ($43/54$) and half the generalization gap ($0.0843$ vs. $0.1587$).\n"
             "   - **Decision Tree (Tuned)** achieves the highest binary-threshold Test F1 ($0.7049$) and G-Mean ($0.7728$) with a minimal generalization gap of $0.0165$."
         ),
         new_code_cell(
@@ -401,7 +417,7 @@ def build_and_execute_colab_notebook() -> Path:
             "    fpr, tpr, _ = roc_curve(y_test, y_prob)\n"
             "    prec, rec, _ = precision_recall_curve(y_test, y_prob)\n"
             "    axes2[0].plot(fpr, tpr, lw=2.2, color=model_colors[m_name], label=f'{m_name} (AUC = {auc(fpr, tpr):.3f})')\n"
-            "    axes2[1].plot(rec, prec, lw=2.2, color=model_colors[m_name], label=f'{m_name} (PR-AUC = {auc(rec, prec):.3f})')\n"
+            "    axes2[1].plot(rec, prec, lw=2.2, color=model_colors[m_name], label=f'{m_name} (PR-AUC = {average_precision_score(y_test, y_prob):.3f})')\n"
             "axes2[0].set_title('(a) ROC Curves on Hold-Out Test Set', fontweight='bold')\n"
             "axes2[0].set_xlabel('False Positive Rate (1 - Specificity)')\n"
             "axes2[0].set_ylabel('True Positive Rate (Sensitivity)')\n"
@@ -417,8 +433,8 @@ def build_and_execute_colab_notebook() -> Path:
         ),
         new_markdown_cell(
             "### Analysis of Step 7 (Confusion Matrices, ROC-AUC, and PR-AUC)\n"
-            "- **Clinical False-Negative Reduction:** Out of $54$ diabetic patients in the held-out test set, Tuned Decision Tree and Tuned Random Forest correctly capture **$43$ patients** ($\\text{FN} = 11$, Sensitivity $= 79.63\\%$), Tuned XGBoost captures **$42$ patients** ($\\text{FN} = 12$, Sensitivity $= 77.78\\%$), and Tuned SVM captures **$40$ patients** ($\\text{FN} = 14$, Sensitivity $= 74.07\\%$). Compared to the baseline Decision Tree ($\\text{FN} = 28$), false negatives are cut by more than **$60\\%$**.\n"
-            "- **Threshold-Independent Discrimination:** In the ROC and Precision-Recall curves, **Tuned XGBoost** achieves the highest ROC-AUC ($0.8224$) and highest PR-AUC ($0.709 / 0.7125$ average precision), followed closely by **Tuned Random Forest** (ROC-AUC $= 0.8146$, PR-AUC $= 0.6974$) and **Tuned SVM** (ROC-AUC $= 0.8078$, PR-AUC $= 0.6937$)."
+            "- **Clinical False-Negative Reduction:** Out of $54$ diabetic patients in the held-out test set, Tuned Decision Tree, Tuned Random Forest, and Tuned XGBoost all correctly capture **$43$ patients** ($\\text{FN} = 11$, Sensitivity $= 79.63\\%$), and Tuned SVM captures **$40$ patients** ($\\text{FN} = 14$, Sensitivity $= 74.07\\%$). Compared to the baseline Decision Tree ($\\text{FN} = 28$), false negatives are cut by more than **$60\\%$**.\n"
+            "- **Threshold-Independent Discrimination:** In the ROC and Precision-Recall curves, **Tuned XGBoost** achieves the highest ROC-AUC ($0.8180$) and highest PR-AUC ($0.7077$), followed closely by **Tuned Random Forest** (ROC-AUC $= 0.8146$, PR-AUC $= 0.6974$) and **Tuned SVM** (ROC-AUC $= 0.8078$, PR-AUC $= 0.6937$)."
         ),
         new_code_cell(
             "# Cell 8: Bias-Variance Diagnosis via Learning Curves & Permutation Feature Importance\n"
@@ -471,10 +487,10 @@ def build_and_execute_colab_notebook() -> Path:
             "   - Unadjusted baseline models suffer from the **accuracy paradox**: while Specificity reaches $0.7900$–$0.8600$, Sensitivity is only $0.4815$–$0.6111$.\n"
             "   - Combining fold-internal SMOTE with 5-fold stratified hyperparameter optimization (`Exp3_Tuned`) elevates clinical Sensitivity to **$0.7407$–$0.7963$** across all four classifiers while maintaining Specificity between $0.7000$ and $0.7500$.\n"
             "3. **Bias–Variance Diagnosis from Learning Curves:**\n"
-            "   - Unconstrained baseline tree learners (Decision Tree, Random Forest, and XGBoost) exhibit severe high variance ($F_{1,\\text{train}} = 1.0000$, CV generalization gaps of $0.367$–$0.448$).\n"
-            "   - Structural pruning (`max_depth=4, min_samples_leaf=15` in Decision Tree) and second-order gradient regularization (`max_depth=4, learning_rate=0.03, reg_lambda=5.0, min_child_weight=5` in XGBoost) compress the CV train-validation F1 gap to **$0.057$** and **$0.061$**, respectively, while RBF SVM (`C=0.5, gamma=0.03`) converges with a near-zero CV gap of **$0.006$**.\n"
+            "   - Unconstrained baseline tree learners (Decision Tree, Random Forest, and XGBoost) exhibit severe high variance ($F_{1,\\text{train}} = 1.0000$, full-fold CV generalization gaps of $0.367$–$0.448$).\n"
+            "   - Structural pruning (`max_depth=4, min_samples_leaf=15` in Decision Tree) and second-order gradient regularization (`max_depth=3, n_estimators=150, learning_rate=0.03, reg_lambda=5.0, min_child_weight=2` in XGBoost) compress the learning-curve gap at $n=491$ to **$0.057$** and **$0.064$**, respectively, while RBF SVM (`C=0.5, gamma=0.03`) converges with a near-zero learning-curve gap of **$0.006$**.\n"
             "4. **Optimal Model Recommendation:**\n"
-            "   - **Primary Recommendation for Probabilistic Risk Stratification:** **Tuned XGBoost** achieves the highest 5-Fold CV F1 ($0.7121 \\pm 0.0209$), the highest Test ROC-AUC ($0.8224$), and the highest Test PR-AUC ($0.7125$).\n"
+            "   - **Primary Recommendation for Risk Stratification:** **Tuned XGBoost** achieves the highest Test ROC-AUC ($0.8180$) and highest Test PR-AUC ($0.7077$), paired with peak Sensitivity ($0.7963$), strong 5-Fold CV F1 ($0.7078 \\pm 0.0217$), and a low generalization gap ($0.0843$, half of Random Forest's $0.1587$).\n"
             "   - **Primary Recommendation for Rule-Interpretable Point-of-Care Screening:** **Tuned Regularized Decision Tree** achieves the highest fixed-threshold Test F1 ($0.7049$), Sensitivity ($0.7963$), Specificity ($0.7500$), and G-Mean ($0.7728$) with the smallest train-test gap ($0.0165$)."
         ),
     ]
@@ -522,16 +538,53 @@ def download_ieetran_and_tectonic() -> Path:
             bst_path,
         )
 
-    tectonic_exe = TOOLS_DIR / "tectonic.exe"
-    if not tectonic_exe.exists():
-        print("Downloading standalone Tectonic LaTeX engine for Windows...")
-        zip_url = "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.15.0/tectonic-0.15.0-x86_64-pc-windows-msvc.zip"
-        zip_path = TOOLS_DIR / "tectonic.zip"
-        urllib.request.urlretrieve(zip_url, zip_path)
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            zf.extractall(TOOLS_DIR)
+    system_tectonic = shutil.which("tectonic")
+    if system_tectonic:
+        return Path(system_tectonic)
 
-    return tectonic_exe
+    machine = platform.machine().lower()
+    is_arm = machine in {"arm64", "aarch64"}
+
+    if sys.platform == "win32":
+        asset_name = "tectonic-0.15.0-x86_64-pc-windows-msvc.zip"
+        bin_name = "tectonic.exe"
+    elif sys.platform == "darwin":
+        asset_name = (
+            "tectonic-0.15.0-aarch64-apple-darwin.tar.gz"
+            if is_arm
+            else "tectonic-0.15.0-x86_64-apple-darwin.tar.gz"
+        )
+        bin_name = "tectonic"
+    elif sys.platform.startswith("linux"):
+        asset_name = (
+            "tectonic-0.15.0-aarch64-unknown-linux-musl.tar.gz"
+            if is_arm
+            else "tectonic-0.15.0-x86_64-unknown-linux-gnu.tar.gz"
+        )
+        bin_name = "tectonic"
+    else:
+        raise RuntimeError(
+            f"Unsupported platform for Tectonic auto-download: {sys.platform} ({machine})"
+        )
+
+    tectonic_bin = TOOLS_DIR / bin_name
+    if not tectonic_bin.exists():
+        print(f"Downloading standalone Tectonic LaTeX engine ({asset_name})...")
+        base_url = "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.15.0/"
+        archive_path = TOOLS_DIR / asset_name
+        urllib.request.urlretrieve(base_url + asset_name, archive_path)
+        if asset_name.endswith(".zip"):
+            with zipfile.ZipFile(archive_path, "r") as zf:
+                zf.extractall(TOOLS_DIR)
+        else:
+            with tarfile.open(archive_path, "r:gz") as tf:
+                tf.extractall(TOOLS_DIR)
+        if sys.platform != "win32" and tectonic_bin.exists():
+            tectonic_bin.chmod(
+                tectonic_bin.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+            )
+
+    return tectonic_bin
 
 
 def compile_ieee_paper(tectonic_exe: Path) -> Path:
@@ -548,164 +601,10 @@ def compile_ieee_paper(tectonic_exe: Path) -> Path:
 
 
 def build_presentation_slides_pdf(tectonic_exe: Path) -> Path:
-    """Compile a 16:9 visual presentation slide deck PDF with embedded experimental charts."""
+    """Compile paper/presentation_slides.tex into a 16:9 Beamer PDF and copy to deliverables/."""
     slides_tex_path = PAPER_DIR / "presentation_slides.tex"
-    slides_tex = r"""\documentclass[aspectratio=169,10pt]{beamer}
-\usetheme{Madrid}
-\usecolortheme{whale}
-\setbeamertemplate{navigation symbols}{}
-\usepackage{booktabs}
-\usepackage{graphicx}
-\usepackage{amsmath}
-
-\title[Early Diabetes ML Benchmark]{Comparative Evaluation of Tree-Based, Ensemble, and Margin Classifiers for Early Diabetes Mellitus Prediction}
-\subtitle{Under Zero-Leakage Preprocessing and Class Imbalance}
-\author[M. D. Nurkolis (26917015)]{Mokhammad Dwi Nurkolis (NIM: 26917015)}
-\institute[Master of Informatics, UII]{Master of Informatics, Faculty of Industrial Technology\\Universitas Islam Indonesia\\ \texttt{halo@nurkolis.xyz}}
-\date{November 20, 2026}
-
-\begin{document}
-
-\begin{frame}
-\titlepage
-\end{frame}
-
-\begin{frame}{1. Clinical Problem, Research Motivation \& Gaps (00:00 -- 00:45)}
-\begin{columns}[T]
-\begin{column}{0.52\textwidth}
-\textbf{Clinical Background:}
-\begin{itemize}
-    \item Type 2 Diabetes Mellitus (T2DM) requires early non-invasive risk screening to prevent retinopathy, nephropathy, and cardiovascular complications.
-    \item Benchmark: \textbf{Pima Indians Diabetes Database} (OpenML ID 37 / NIDDK, $N = 768$, $d = 8$ clinical attributes).
-\end{itemize}
-\vspace{4pt}
-\textbf{Research Questions:}
-\begin{enumerate}
-    \item \textbf{RQ1:} How do CART, Random Forest, XGBoost, and RBF-SVM compare under zero-leakage pipelines?
-    \item \textbf{RQ2:} How much do fold-internal SMOTE and tuning improve minority Recall and F1?
-    \item \textbf{RQ3:} How does structural regularization alter the bias--variance trade-off?
-\end{enumerate}
-\end{column}
-\begin{column}{0.46\textwidth}
-\begin{alertblock}{Three Flaws in Prior Studies}
-\begin{enumerate}
-    \item \textbf{Disguised Missing Data:} Biologically impossible \texttt{0} values in Insulin ($48.7\%$) and Skin Thickness ($29.6\%$) treated as real measurements.
-    \item \textbf{Accuracy Paradox:} Under $65.1\%$ vs.\ $34.9\%$ imbalance, baseline models yield high Specificity but miss $>40\%$ of diabetic patients.
-    \item \textbf{Data Leakage:} Global imputation and SMOTE prior to splitting inflate validation metrics artificially.
-\end{enumerate}
-\end{alertblock}
-\end{column}
-\end{columns}
-\end{frame}
-
-\begin{frame}{2. Dataset Characteristics \& Biological Zero Audit (00:45 -- 01:35)}
-\begin{center}
-\includegraphics[width=0.84\textwidth]{../artifacts/figures/fig1_class_and_missing_audit.pdf}
-\end{center}
-\vspace{-6pt}
-\begin{itemize}
-    \item \textbf{Class Imbalance:} $500$ Non-Diabetic ($65.1\%$) vs.\ $268$ Diabetic ($34.9\%$) $\rightarrow$ ratio $1 : 1.87$.
-    \item \textbf{Distributional Distortion:} Raw Insulin mean is $79.80\text{ }\mu\text{U/mL}$, whereas valid physiological median is $125.00\text{ }\mu\text{U/mL}$ (mean $155.55$). Right-skewed outliers motivate \textbf{median imputation}.
-\end{itemize}
-\end{frame}
-
-\begin{frame}{3. Zero-Leakage Pipeline \& 3-Stage Experimental Design (01:35 -- 02:35)}
-\begin{columns}[T]
-\begin{column}{0.48\textwidth}
-\textbf{Strict Anti-Leakage Architecture:}
-\begin{itemize}
-    \item \textbf{Stratified 80:20 Split First:}
-    \begin{itemize}
-        \item Train: $N = 614$ ($400$ neg, $214$ pos)
-        \item Hold-Out Test: $N = 154$ ($100$ neg, $54$ pos)
-    \end{itemize}
-    \item \textbf{Fold-Internal \texttt{imblearn.Pipeline}:}
-    \begin{enumerate}
-        \item $\Phi_{\text{zero}\to\text{NaN}}$ on 5 physiological columns
-        \item \texttt{SimpleImputer(strategy='median')}
-        \item \texttt{StandardScaler()} ($z$-score)
-        \item \texttt{SMOTE} (active \emph{only} inside training folds)
-        \item Classifier (\texttt{DT}, \texttt{RF}, \texttt{XGBoost}, \texttt{SVM})
-    \end{enumerate}
-\end{itemize}
-\end{column}
-\begin{column}{0.50\textwidth}
-\includegraphics[width=\textwidth]{../artifacts/figures/fig2_correlation_heatmap.pdf}
-\vspace{-8pt}
-\begin{block}{Three Experimental Stages}
-\scriptsize
-\textbf{Exp 1 (Baseline):} Default params, no SMOTE.\\
-\textbf{Exp 2 (Imbalance):} Fold-internal SMOTE ($1:1$).\\
-\textbf{Exp 3 (Tuned+SMOTE):} 5-Fold Stratified \texttt{GridSearchCV} optimizing F1-Score \& regularization.
-\end{block}
-\end{column}
-\end{columns}
-\end{frame}
-
-\begin{frame}{4. Quantitative Results Across All 3 Experimental Stages (02:35 -- 03:45)}
-\centering
-\scriptsize
-\begin{tabular}{llrrrrrrrr}
-\toprule
-\textbf{Stage} & \textbf{Algorithm} & \textbf{Train F1} & \textbf{5-Fold CV F1} & \textbf{Test Acc} & \textbf{Test Prec} & \textbf{Test Sens} & \textbf{Test Spec} & \textbf{Test F1} & \textbf{Test AUC} \\
-\midrule
-Exp 1: Baseline & Decision Tree & 1.0000 & $0.5518 \pm 0.0201$ & 0.6818 & 0.5532 & \textcolor{red}{0.4815} & 0.7900 & 0.5149 & 0.6357 \\
- & Random Forest & 1.0000 & $0.6330 \pm 0.0192$ & \textbf{0.7727} & \textbf{0.7021} & 0.6111 & \textbf{0.8600} & 0.6535 & 0.8181 \\
- & XGBoost & 1.0000 & $0.6117 \pm 0.0183$ & 0.7662 & 0.6957 & 0.5926 & \textbf{0.8600} & 0.6400 & 0.8057 \\
- & SVM (RBF) & 0.7461 & $0.6485 \pm 0.0187$ & 0.7403 & 0.6522 & 0.5556 & 0.8400 & 0.6000 & 0.7964 \\
-\midrule
-Exp 2: SMOTE & Decision Tree & 1.0000 & $0.6144 \pm 0.0100$ & 0.7013 & 0.5690 & 0.6111 & 0.7500 & 0.5893 & 0.6806 \\
- & Random Forest & 1.0000 & $0.6683 \pm 0.0356$ & 0.7532 & 0.6333 & 0.7037 & 0.7800 & 0.6667 & 0.8139 \\
- & XGBoost & 1.0000 & $0.6063 \pm 0.0277$ & 0.7338 & 0.6140 & 0.6481 & 0.7800 & 0.6306 & 0.8106 \\
- & SVM (RBF) & 0.7930 & $0.6854 \pm 0.0432$ & 0.7273 & 0.5968 & 0.6852 & 0.7500 & 0.6379 & 0.8112 \\
-\midrule
-\textbf{Exp 3: Tuned} & \textbf{Decision Tree} & 0.7214 & $0.6739 \pm 0.0246$ & 0.7662 & 0.6324 & \textbf{0.7963} & \textbf{0.7500} & \textbf{0.7049} & 0.8012 \\
-\textbf{+ SMOTE} & \textbf{Random Forest} & 0.8358 & $0.7112 \pm 0.0154$ & 0.7338 & 0.5890 & \textbf{0.7963} & 0.7000 & 0.6772 & 0.8146 \\
- & \textbf{XGBoost} & 0.7531 & \textbf{0.7121 $\pm$ 0.0209} & 0.7338 & 0.5915 & 0.7778 & 0.7100 & 0.6720 & \textbf{0.8224} \\
- & \textbf{SVM (RBF)} & 0.7043 & $0.6956 \pm 0.0091$ & 0.7273 & 0.5882 & 0.7407 & 0.7200 & 0.6557 & 0.8078 \\
-\bottomrule
-\end{tabular}
-\vspace{4pt}
-\begin{columns}[T]
-\begin{column}{0.48\textwidth}
-\centering
-\includegraphics[width=0.95\textwidth]{../artifacts/figures/fig4_roc_pr_curves.pdf}
-\end{column}
-\begin{column}{0.48\textwidth}
-\centering
-\includegraphics[width=0.95\textwidth]{../artifacts/figures/fig6_feature_importance.pdf}
-\end{column}
-\end{columns}
-\end{frame}
-
-\begin{frame}{5. Bias--Variance Analysis, Confusion Matrices \& Conclusion (03:45 -- 05:00)}
-\begin{columns}[T]
-\begin{column}{0.48\textwidth}
-\centering
-\includegraphics[width=0.88\textwidth]{../artifacts/figures/fig3_confusion_matrices.pdf}
-\vspace{-4pt}
-\scriptsize
-\textbf{False Negatives Cut by $>60\%$:} From $28$ missed patients (Baseline DT) down to $11$ (Tuned DT/RF) and $12$ (Tuned XGBoost).
-\end{column}
-\begin{column}{0.50\textwidth}
-\centering
-\includegraphics[width=0.88\textwidth]{../artifacts/figures/fig5_learning_curves_bias_variance.pdf}
-\vspace{-4pt}
-\scriptsize
-\textbf{Conclusion \& Model Selection:}
-\begin{itemize}
-    \item \textbf{Overfitting Resolved:} Pruning (\texttt{max\_depth=4}) \& $L_2$ regularization (\texttt{reg\_lambda=5.0}) cut Train-Test F1 gaps from $0.36$--$0.48$ down to $0.0165$ (DT) and $0.0811$ (XGB).
-    \item \textbf{Best Overall Risk Ranking:} \textbf{Tuned XGBoost} (CV F1 $= 0.7121$, ROC-AUC $= 0.8224$, PR-AUC $= 0.7125$).
-    \item \textbf{Best Interpretable Triage Rule:} \textbf{Tuned Decision Tree} (Test F1 $= 0.7049$, Sens $= 79.63\%$, Spec $= 75.00\%$).
-\end{itemize}
-\end{column}
-\end{columns}
-\end{frame}
-
-\end{document}
-"""
-    with open(slides_tex_path, "w", encoding="utf-8") as f:
-        f.write(slides_tex)
+    if not slides_tex_path.exists():
+        raise FileNotFoundError(f"Missing presentation source file: {slides_tex_path}")
 
     print("Compiling 16:9 Beamer Presentation Slides PDF via Tectonic...")
     subprocess.run([str(tectonic_exe), "presentation_slides.tex"], cwd=str(PAPER_DIR), check=True)

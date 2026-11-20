@@ -9,7 +9,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 
-from features.dataset.loader import BIOLOGICAL_ZERO_COLUMNS
+from features.dataset.loader import BIOLOGICAL_ZERO_COLUMNS, FEATURE_COLUMNS
 
 
 class BiologicalZeroToNanTransformer(BaseEstimator, TransformerMixin):
@@ -20,8 +20,20 @@ class BiologicalZeroToNanTransformer(BaseEstimator, TransformerMixin):
 
     def fit(self, X, y=None):
         self.columns_ = (
-            self.columns if self.columns is not None else BIOLOGICAL_ZERO_COLUMNS
+            list(self.columns)
+            if self.columns is not None
+            else list(BIOLOGICAL_ZERO_COLUMNS)
         )
+        if isinstance(X, pd.DataFrame):
+            self.column_indices_ = [
+                X.columns.get_loc(col) for col in self.columns_ if col in X.columns
+            ]
+        else:
+            self.column_indices_ = [
+                FEATURE_COLUMNS.index(col)
+                for col in self.columns_
+                if col in FEATURE_COLUMNS
+            ]
         return self
 
     def transform(self, X):
@@ -33,8 +45,7 @@ class BiologicalZeroToNanTransformer(BaseEstimator, TransformerMixin):
             return X_out.to_numpy(dtype=float)
 
         X_arr = np.array(X, dtype=float, copy=True)
-        # Indices of BIOLOGICAL_ZERO_COLUMNS in canonical order: [1, 2, 3, 4, 5]
-        for idx in [1, 2, 3, 4, 5]:
+        for idx in self.column_indices_:
             if idx < X_arr.shape[1]:
                 X_arr[X_arr[:, idx] == 0, idx] = np.nan
         return X_arr

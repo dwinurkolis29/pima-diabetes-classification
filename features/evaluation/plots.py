@@ -9,6 +9,7 @@ import seaborn as sns
 from sklearn.inspection import permutation_importance
 from sklearn.metrics import (
     auc,
+    average_precision_score,
     confusion_matrix,
     precision_recall_curve,
     roc_curve,
@@ -145,7 +146,7 @@ def generate_evaluation_figures(
         pipe = fitted_pipelines["Exp3_Tuned"][model_name]
         y_prob = pipe.predict_proba(X_test)[:, 1]
         prec, rec, _ = precision_recall_curve(y_test, y_prob)
-        pr_auc = auc(rec, prec)
+        pr_auc = average_precision_score(y_test, y_prob)
         axes[1].plot(
             rec,
             prec,
@@ -269,7 +270,7 @@ def generate_evaluation_figures(
     # -------------------------------------------------------------------------
     # FIGURE 6: Experimental Progression & Permutation Feature Importance
     # -------------------------------------------------------------------------
-    fig6, axes = plt.subplots(1, 2, figsize=(12.2, 4.8))
+    fig6, axes = plt.subplots(1, 2, figsize=(13.2, 5.0))
 
     # Panel (a): F1 and Sensitivity Progression Across Stages
     stage_labels = {
@@ -301,21 +302,23 @@ def generate_evaluation_figures(
         ):
             axes[0].text(
                 bar.get_x() + bar.get_width() / 2,
-                val + 0.006,
+                val + 0.007,
                 f"{val:.3f}",
                 ha="center",
                 va="bottom",
-                fontsize=7.2,
+                fontsize=7.5,
                 fontweight="bold",
             )
+            recall_color = "#1f2937" if s_idx == 0 else "white"
             axes[0].text(
                 bar.get_x() + bar.get_width() / 2,
-                val - 0.035,
-                f"R:{rec:.2f}",
+                0.42 + (val - 0.42) / 2,
+                f"R={rec:.2f}",
                 ha="center",
-                va="top",
-                fontsize=6.5,
-                color="white",
+                va="center",
+                rotation=90,
+                fontsize=7.2,
+                color=recall_color,
                 fontweight="bold",
             )
 
@@ -326,7 +329,7 @@ def generate_evaluation_figures(
     axes[0].set_xticks(x)
     axes[0].set_xticklabels(model_order)
     axes[0].set_ylabel("Test F1-Score")
-    axes[0].set_ylim(0.45, 0.85)
+    axes[0].set_ylim(0.42, 0.84)
     axes[0].grid(axis="y", linestyle="--", alpha=0.4)
     axes[0].legend(loc="upper left")
 

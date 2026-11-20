@@ -77,22 +77,36 @@ pima-diabetes-classification/
 | | XGBoost | 1.0000 | $0.6063 \pm 0.0277$ | 0.7338 | 0.6140 | 0.6481 | 0.7800 | 0.6306 | 0.8106 | 0.6679 | +0.3694 |
 | | SVM (RBF) | 0.7930 | $0.6854 \pm 0.0432$ | 0.7273 | 0.5968 | 0.6852 | 0.7500 | 0.6379 | 0.8112 | 0.6728 | +0.1551 |
 | **Exp 3: Tuned+SMOTE** | **Decision Tree** | 0.7214 | $0.6739 \pm 0.0246$ | 0.7662 | 0.6324 | **0.7963** | **0.7500** | **0.7049** | 0.8012 | 0.6440 | **+0.0165** |
-| | **Random Forest** | 0.8358 | $0.7112 \pm 0.0154$ | 0.7338 | 0.5890 | **0.7963** | 0.7000 | 0.6772 | 0.8146 | 0.6974 | +0.1587 |
-| | **XGBoost** | 0.7531 | **0.7121 $\pm$ 0.0209** | 0.7338 | 0.5915 | 0.7778 | 0.7100 | 0.6720 | **0.8224** | **0.7125** | +0.0811 |
+| | **Random Forest** | 0.8358 | **$0.7112 \pm 0.0154$** | 0.7338 | 0.5890 | **0.7963** | 0.7000 | 0.6772 | 0.8146 | 0.6974 | +0.1587 |
+| | **XGBoost** | 0.7615 | $0.7078 \pm 0.0217$ | 0.7338 | 0.5890 | **0.7963** | 0.7000 | 0.6772 | **0.8180** | **0.7077** | +0.0843 |
 | | **SVM (RBF)** | 0.7043 | $0.6956 \pm 0.0091$ | 0.7273 | 0.5882 | 0.7407 | 0.7200 | 0.6557 | 0.8078 | 0.6937 | +0.0486 |
 
 ---
 
 ## Quick Start & Reproducibility
 
-```powershell
+### macOS / Linux (`bash` / `zsh`)
+```bash
 # 1. Create and activate virtual environment
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+
+# 2. Run the complete experimental benchmark and regenerate all CSVs & 300 DPI figures
+.venv/bin/python run_all.py
+
+# 3. Rebuild the executed Colab notebook (.ipynb), IEEE LaTeX PDF, and Presentation Slides PDF
+.venv/bin/python build_deliverables.py
+```
+
+### Windows (`PowerShell`)
+```powershell
+# 1. Create virtual environment and install dependencies
 python -m venv .venv
 .\.venv\Scripts\pip.exe install -r requirements.txt
 
 # 2. Run the complete experimental benchmark and regenerate all CSVs & 300 DPI figures
 .\.venv\Scripts\python.exe run_all.py
 
-# 3. Rebuild the executed Colab notebook (.ipynb) and compile the IEEE LaTeX PDF
+# 3. Rebuild the executed Colab notebook (.ipynb), IEEE LaTeX PDF, and Presentation Slides PDF
 .\.venv\Scripts\python.exe build_deliverables.py
 ```

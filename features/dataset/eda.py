@@ -115,7 +115,7 @@ def generate_eda_figures(
         fontweight="bold",
     )
     axes[1].set_xlabel("Percentage of Samples (%)")
-    axes[1].set_xlim(0, 60)
+    axes[1].set_xlim(0, 68)
     axes[1].grid(axis="x", linestyle="--", alpha=0.4)
     for bar, (_, row) in zip(bars2, bio_df.iterrows()):
         axes[1].text(
@@ -171,6 +171,9 @@ def generate_eda_figures(
         var_name="Feature",
         value_name="Z_Score",
     )
+    melted["Feature"] = melted["Feature"].replace(
+        {"DiabetesPedigreeFunction": "Diabetes\nPedigree"}
+    )
     melted["Diagnosis"] = melted[TARGET_COLUMN].map(
         {0: "Non-Diabetic (0)", 1: "Diabetic (1)"}
     )
@@ -179,6 +182,8 @@ def generate_eda_figures(
         x="Feature",
         y="Z_Score",
         hue="Diagnosis",
+        order=["Glucose", "BMI", "Age", "Diabetes\nPedigree"],
+        hue_order=["Non-Diabetic (0)", "Diabetic (1)"],
         palette={"Non-Diabetic (0)": "#2b5c8f", "Diabetic (1)": "#d95f02"},
         ax=axes[1],
         fliersize=2.5,
@@ -190,7 +195,7 @@ def generate_eda_figures(
     axes[1].set_ylabel("Standardized Value (Z-Score)")
     axes[1].set_xlabel("")
     axes[1].grid(axis="y", linestyle="--", alpha=0.4)
-    axes[1].legend(loc="upper right")
+    axes[1].legend(loc="upper left")
 
     fig2.tight_layout()
     fig2_png = figures_dir / "fig2_correlation_heatmap.png"

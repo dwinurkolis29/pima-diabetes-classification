@@ -57,7 +57,7 @@
 \end{itemize}
 \end{frame}
 
-\begin{frame}{3. Zero-Leakage Pipeline \& 3-Stage Experimental Design (01:35 -- 02:35)}
+\begin{frame}{3. Zero-Leakage Pipeline \& 3-Stage Design (01:35 -- 02:35)}
 \begin{columns}[T]
 \begin{column}{0.48\textwidth}
 \textbf{Strict Anti-Leakage Architecture:}
@@ -79,7 +79,7 @@
 \end{column}
 \begin{column}{0.50\textwidth}
 \includegraphics[width=0.96\textwidth]{../artifacts/figures/fig2_correlation_heatmap.pdf}
-\vspace{-8pt}
+\vspace{-6pt}
 \begin{block}{Three Experimental Stages}
 \scriptsize
 \textbf{Exp 1 (Baseline):} Default params, no SMOTE.\\
@@ -90,7 +90,7 @@
 \end{columns}
 \end{frame}
 
-\begin{frame}{4. Quantitative Results Across All 3 Experimental Stages (02:35 -- 03:45)}
+\begin{frame}{4. Quantitative Benchmark Results Across 3 Stages (02:35 -- 03:15)}
 \centering
 \resizebox{0.98\textwidth}{!}{%
 \begin{tabular}{llrrrrrrrrr}
@@ -108,46 +108,62 @@ Exp 2: SMOTE & Decision Tree & 1.0000 & $0.6144 \pm 0.0100$ & 0.7013 & 0.5690 & 
  & SVM (RBF) & 0.7930 & $0.6854 \pm 0.0432$ & 0.7273 & 0.5968 & 0.6852 & 0.7500 & 0.6379 & 0.8112 & +0.1551 \\
 \midrule
 \textbf{Exp 3: Tuned} & \textbf{Decision Tree} & 0.7214 & $0.6739 \pm 0.0246$ & 0.7662 & 0.6324 & \textbf{0.7963} & \textbf{0.7500} & \textbf{0.7049} & 0.8012 & \textbf{+0.0165} \\
-\textbf{+ SMOTE} & \textbf{Random Forest} & 0.8358 & $0.7112 \pm 0.0154$ & 0.7338 & 0.5890 & \textbf{0.7963} & 0.7000 & 0.6772 & 0.8146 & +0.1587 \\
- & \textbf{XGBoost} & 0.7531 & \textbf{0.7121 $\pm$ 0.0209} & 0.7338 & 0.5915 & 0.7778 & 0.7100 & 0.6720 & \textbf{0.8224} & +0.0811 \\
+\textbf{+ SMOTE} & \textbf{Random Forest} & 0.8358 & \textbf{0.7112 $\pm$ 0.0154} & 0.7338 & 0.5890 & \textbf{0.7963} & 0.7000 & 0.6772 & 0.8146 & +0.1587 \\
+ & \textbf{XGBoost} & 0.7615 & $0.7078 \pm 0.0217$ & 0.7338 & 0.5890 & \textbf{0.7963} & 0.7000 & 0.6772 & \textbf{0.8180} & +0.0843 \\
  & \textbf{SVM (RBF)} & 0.7043 & $0.6956 \pm 0.0091$ & 0.7273 & 0.5882 & 0.7407 & 0.7200 & 0.6557 & 0.8078 & +0.0486 \\
 \bottomrule
 \end{tabular}%
 }
-\vspace{3pt}
+\vspace{6pt}
+\begin{block}{Key Quantitative Progression}
+\footnotesize
+\begin{itemize}
+    \item \textbf{Exp 1 (Accuracy Paradox):} High Specificity ($0.79$--$0.86$) masks low Sensitivity ($0.4815$--$0.6111$) and severe tree overfitting ($\Delta F_1 = +0.3465$ to $+0.4851$).
+    \item \textbf{Exp 2 (Fold-Internal SMOTE):} Immediately boosts minority Recall across every paradigm ($+9.26$ to $+12.96$ pp) without data leakage.
+    \item \textbf{Exp 3 (Tuned + SMOTE):} \textbf{XGBoost} leads ROC-AUC ($0.8180$) and PR-AUC ($0.7077$) with \textbf{Random Forest} leading CV F1 ($0.7112$); \textbf{Decision Tree} achieves top Test F1 ($0.7049$), Sensitivity ($79.63\%$), and smallest gap ($+0.0165$).
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}{5. Confusion Matrices \& ROC/PR Discrimination (03:15 -- 03:55)}
 \begin{columns}[T]
-\begin{column}{0.48\textwidth}
+\begin{column}{0.46\textwidth}
 \centering
-\includegraphics[width=0.90\textwidth]{../artifacts/figures/fig4_roc_pr_curves.pdf}
+\includegraphics[width=0.92\textwidth]{../artifacts/figures/fig3_confusion_matrices.pdf}
 \end{column}
-\begin{column}{0.48\textwidth}
+\begin{column}{0.52\textwidth}
 \centering
-\includegraphics[width=0.90\textwidth]{../artifacts/figures/fig6_feature_importance.pdf}
+\includegraphics[width=0.98\textwidth]{../artifacts/figures/fig4_roc_pr_curves.pdf}
+\vspace{4pt}
+\begin{block}{Clinical Error \& Ranking Takeaways}
+\footnotesize
+\begin{itemize}
+    \item \textbf{False Negatives Cut by $>60\%$:} Missed diabetic cases drop from $28/54$ (Baseline DT) to $11/54$ across all three tuned tree models (DT, RF, XGBoost).
+    \item \textbf{Threshold-Independent Ranking:} Tuned XGBoost dominates both ROC-AUC ($0.818$) and step-wise PR-AUC ($0.708$ vs.\ $0.351$ prevalence baseline).
+\end{itemize}
+\end{block}
 \end{column}
 \end{columns}
 \end{frame}
 
-\begin{frame}{5. Bias--Variance Analysis, Confusion Matrices \& Conclusion (03:45 -- 05:00)}
+\begin{frame}{6. Bias--Variance, Feature Importance \& Conclusion (03:55 -- 05:00)}
 \begin{columns}[T]
-\begin{column}{0.47\textwidth}
+\begin{column}{0.49\textwidth}
 \centering
-\includegraphics[width=0.73\textwidth]{../artifacts/figures/fig3_confusion_matrices.pdf}
-\vspace{2pt}
-
-\scriptsize
-\textbf{False Negatives Cut by $>60\%$:} From $28$ missed patients (Baseline DT) down to $11$ (Tuned DT/RF) and $12$ (Tuned XGBoost).
+\includegraphics[width=0.94\textwidth]{../artifacts/figures/fig5_learning_curves_bias_variance.pdf}
 \end{column}
-\begin{column}{0.51\textwidth}
+\begin{column}{0.49\textwidth}
 \centering
-\includegraphics[width=0.73\textwidth]{../artifacts/figures/fig5_learning_curves_bias_variance.pdf}
-\vspace{1pt}
-
+\includegraphics[width=0.98\textwidth]{../artifacts/figures/fig6_feature_importance.pdf}
+\vspace{2pt}
+\begin{block}{Conclusion \& Model Selection}
 \scriptsize
 \begin{itemize}
-    \item \textbf{Overfitting Resolved:} Pruning (\texttt{max\_depth=4}) \& $L_2$ regularization (\texttt{reg\_lambda=5.0}) cut Train-Test F1 gaps from $0.36$--$0.48$ down to $0.0165$ (DT) and $0.0811$ (XGB).
-    \item \textbf{Best Overall Risk Ranking:} \textbf{Tuned XGBoost} (CV F1 $= 0.7121$, ROC-AUC $= 0.8224$, PR-AUC $= 0.7125$).
+    \item \textbf{Overfitting Resolved:} Pruning (\texttt{max\_depth=4}) \& regularization (\texttt{max\_depth=3}, \texttt{reg\_lambda=5.0}) cut Train--Test F1 gaps from $0.35$--$0.49$ down to $0.0165$ (DT) and $0.0843$ (XGB); \textbf{Glucose}, \textbf{BMI}, and \textbf{Age} lead consistently.
+    \item \textbf{Best Risk Ranking:} \textbf{Tuned XGBoost} (ROC-AUC $= 0.8180$, PR-AUC $= 0.7077$, Sens $= 79.63\%$, CV F1 $= 0.7078$).
     \item \textbf{Best Interpretable Rule:} \textbf{Tuned Decision Tree} (Test F1 $= 0.7049$, Sens $= 79.63\%$, Spec $= 75.00\%$).
 \end{itemize}
+\end{block}
 \end{column}
 \end{columns}
 \end{frame}

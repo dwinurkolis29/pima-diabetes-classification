@@ -1,9 +1,14 @@
 """Single entrypoint to execute data loading, EDA, 3-stage ML experiments, and publication figure generation."""
 
-import warnings
 from pathlib import Path
+import warnings
 
-warnings.filterwarnings("ignore")
+warnings.filterwarnings(
+    "ignore",
+    message=r"The `probability` parameter was deprecated.*",
+    category=FutureWarning,
+    module=r"sklearn\.svm\._base",
+)
 
 from features.dataset.eda import audit_biological_zeros, generate_eda_figures
 from features.dataset.loader import create_stratified_split, load_pima_dataset

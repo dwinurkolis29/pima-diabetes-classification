@@ -20,10 +20,10 @@
   * Non-Diabetic (`0`): **500 pasien (65,10%)**
   * Diabetic (`1`): **268 pasien (34,90%)**
 * **Audit Nilai `0` Biologis Mustahil:**
-  * `Insulin`: **374 sampel (48,70%)** bernilai 0 $\rightarrow$ rata-rata mentah terdistorsi ($79,80$ vs median valid $125,00\text{ }\mu\text{U/mL}$).
+  * `Insulin`: **374 sampel (48,70%)** bernilai 0 $\rightarrow$ rata-rata mentah terdistorsi ($79,80$ vs median valid $125,00\text{ }\mu\text{U/mL}$, rata-rata valid $155,55$).
   * `SkinThickness`: **227 sampel (29,56%)** bernilai 0.
   * `BloodPressure`: **35 sampel (4,56%)**, `BMI`: **11 sampel (1,43%)**, `Glucose`: **5 sampel (0,65%)**.
-* *(Tampilkan Gambar `fig1_class_and_missing_audit.png` dan `fig2_correlation_heatmap.png`)*
+* *(Tampilkan Gambar `fig1_class_and_missing_audit.pdf`)*
 
 ---
 
@@ -41,35 +41,40 @@
   * **Exp 1 (Baseline):** Parameter default, tanpa SMOTE.
   * **Exp 2 (Imbalance Handling):** Penambahan fold-internal SMOTE.
   * **Exp 3 (Hyperparameter Tuning + SMOTE):** Optimasi *5-Fold Stratified GridSearchCV* berbasis F1-Score.
+* *(Tampilkan Gambar `fig2_correlation_heatmap.pdf`)*
 
 ---
 
-## Slide 4 — Hasil Eksperimen & Analisis Perbandingan Model (02:35 – 03:45)
-| Tahap Eksperimen | Algoritma | CV F1 ($\mu \pm \sigma$) | Test Acc | Test Prec | Test Recall (Sens) | Test Spec | Test F1 | Test ROC-AUC | Train-Test Gap ($\Delta F_1$) |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Exp 1: Baseline** | Decision Tree | $0.5518 \pm 0.0201$ | 0.6818 | 0.5532 | **0.4815** | 0.7900 | 0.5149 | 0.6357 | +0.4851 |
-| | Random Forest | $0.6330 \pm 0.0192$ | 0.7727 | 0.7021 | 0.6111 | 0.8600 | 0.6535 | 0.8181 | +0.3465 |
-| | XGBoost | $0.6117 \pm 0.0183$ | 0.7662 | 0.6957 | 0.5926 | 0.8600 | 0.6400 | 0.8057 | +0.3600 |
-| | SVM (RBF) | $0.6485 \pm 0.0187$ | 0.7403 | 0.6522 | 0.5556 | 0.8400 | 0.6000 | 0.7964 | +0.1461 |
-| **Exp 2: SMOTE** | Decision Tree | $0.6144 \pm 0.0100$ | 0.7013 | 0.5690 | 0.6111 | 0.7500 | 0.5893 | 0.6806 | +0.4107 |
-| | Random Forest | $0.6683 \pm 0.0356$ | 0.7532 | 0.6333 | 0.7037 | 0.7800 | 0.6667 | 0.8139 | +0.3333 |
-| | XGBoost | $0.6063 \pm 0.0277$ | 0.7338 | 0.6140 | 0.6481 | 0.7800 | 0.6306 | 0.8106 | +0.3694 |
-| | SVM (RBF) | $0.6854 \pm 0.0432$ | 0.7273 | 0.5968 | 0.6852 | 0.7500 | 0.6379 | 0.8112 | +0.1551 |
-| **Exp 3: Tuned+SMOTE** | **Decision Tree** | $0.6739 \pm 0.0246$ | 0.7662 | 0.6324 | **0.7963** | **0.7500** | **0.7049** | 0.8012 | **+0.0165** |
-| | **Random Forest** | $0.7112 \pm 0.0154$ | 0.7338 | 0.5890 | **0.7963** | 0.7000 | 0.6772 | 0.8146 | +0.1587 |
-| | **XGBoost** | **0.7121 $\pm$ 0.0209** | 0.7338 | 0.5915 | 0.7778 | 0.7100 | 0.6720 | **0.8224** | +0.0811 |
-| | **SVM (RBF)** | $0.6956 \pm 0.0091$ | 0.7273 | 0.5882 | 0.7407 | 0.7200 | 0.6557 | 0.8078 | +0.0486 |
-
-* *(Tampilkan Gambar `fig3_confusion_matrices.png` dan `fig4_roc_pr_curves.png`)*
+## Slide 4 — Hasil Eksperimen Kuantitatif 3 Tahap (02:35 – 03:15)
+| Tahap Eksperimen | Algoritma | Train F1 | 5-Fold CV F1 ($\mu \pm \sigma$) | Test Acc | Test Prec | Test Recall (Sens) | Test Spec | Test F1 | Test ROC-AUC | Train-Test Gap ($\Delta F_1$) |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Exp 1: Baseline** | Decision Tree | 1.0000 | $0.5518 \pm 0.0201$ | 0.6818 | 0.5532 | **0.4815** | 0.7900 | 0.5149 | 0.6357 | +0.4851 |
+| | Random Forest | 1.0000 | $0.6330 \pm 0.0192$ | **0.7727** | **0.7021** | 0.6111 | **0.8600** | 0.6535 | 0.8181 | +0.3465 |
+| | XGBoost | 1.0000 | $0.6117 \pm 0.0183$ | 0.7662 | 0.6957 | 0.5926 | **0.8600** | 0.6400 | 0.8057 | +0.3600 |
+| | SVM (RBF) | 0.7461 | $0.6485 \pm 0.0187$ | 0.7403 | 0.6522 | 0.5556 | 0.8400 | 0.6000 | 0.7964 | +0.1461 |
+| **Exp 2: SMOTE** | Decision Tree | 1.0000 | $0.6144 \pm 0.0100$ | 0.7013 | 0.5690 | 0.6111 | 0.7500 | 0.5893 | 0.6806 | +0.4107 |
+| | Random Forest | 1.0000 | $0.6683 \pm 0.0356$ | 0.7532 | 0.6333 | 0.7037 | 0.7800 | 0.6667 | 0.8139 | +0.3333 |
+| | XGBoost | 1.0000 | $0.6063 \pm 0.0277$ | 0.7338 | 0.6140 | 0.6481 | 0.7800 | 0.6306 | 0.8106 | +0.3694 |
+| | SVM (RBF) | 0.7930 | $0.6854 \pm 0.0432$ | 0.7273 | 0.5968 | 0.6852 | 0.7500 | 0.6379 | 0.8112 | +0.1551 |
+| **Exp 3: Tuned+SMOTE** | **Decision Tree** | 0.7214 | $0.6739 \pm 0.0246$ | 0.7662 | 0.6324 | **0.7963** | **0.7500** | **0.7049** | 0.8012 | **+0.0165** |
+| | **Random Forest** | 0.8358 | **0.7112 $\pm$ 0.0154** | 0.7338 | 0.5890 | **0.7963** | 0.7000 | 0.6772 | 0.8146 | +0.1587 |
+| | **XGBoost** | 0.7615 | $0.7078 \pm 0.0217$ | 0.7338 | 0.5890 | **0.7963** | 0.7000 | 0.6772 | **0.8180** | +0.0843 |
+| | **SVM (RBF)** | 0.7043 | $0.6956 \pm 0.0091$ | 0.7273 | 0.5882 | 0.7407 | 0.7200 | 0.6557 | 0.8078 | +0.0486 |
 
 ---
 
-## Slide 5 — Analisis Bias–Variance (Learning Curves) & Kesimpulan (03:45 – 05:00)
-* **Diagnosis Bias–Variance (`fig5_learning_curves_bias_variance.png`):**
-  * Pada **Exp 1 (Baseline)**, Decision Tree, Random Forest, dan XGBoost mengalami *severe overfitting* (*High Variance*): skor Train F1 = `1.0000` sedangkan Test F1 hanya `0.5149–0.6535` (Gap $\Delta F_1$ mencapai `0.34–0.48`).
-  * Pada **Exp 3 (Tuned)**, pembatasan kapasitas (`max_depth=4, min_samples_leaf=15` pada Decision Tree; `max_depth=4, learning_rate=0.03, reg_lambda=5.0` pada XGBoost) berhasil memangkas *generalization gap* menjadi **`0.0165`** (DT) dan **`0.0811`** (XGBoost).
-* **Faktor Klinis Dominan (`fig6_feature_importance.png`):**
-  * Seluruh model sepakat bahwa **Plasma Glucose** (47%–58% bobot), **BMI**, dan **Age** adalah penentu utama diagnosis diabetes.
+## Slide 5 — Confusion Matrix & Kurva Diskriminasi ROC / PR (03:15 – 03:55)
+* **Penurunan *False Negative* $> 60\%$ (`fig3_confusion_matrices.pdf`):** Kasus diabetes yang terlewat turun dari **28 pasien** (Decision Tree baseline) menjadi hanya **11 pasien** pada ketiga model pohon hasil tuning (Decision Tree, Random Forest, dan XGBoost; Sensitivity **79,63%**).
+* **Diskriminasi Lintas Ambang Batas (`fig4_roc_pr_curves.pdf`):** **Tuned XGBoost** unggul pada **Test ROC-AUC (`0,8180`)** dan **step-wise Test PR-AUC (`0,7077`)**, jauh melampaui *no-skill baseline* (`0,351`).
+
+---
+
+## Slide 6 — Analisis Bias–Variance, Feature Importance & Kesimpulan (03:55 – 05:00)
+* **Diagnosis Bias–Variance (`fig5_learning_curves_bias_variance.pdf`):**
+  * Pada **Exp 1 (Baseline)**, Decision Tree, Random Forest, dan XGBoost mengalami *severe overfitting* (*High Variance*): skor Train F1 = `1.0000` sedangkan Test F1 hanya `0.5149–0.6535` (Gap $\Delta F_1$ mencapai `0.35–0.49`).
+  * Pada **Exp 3 (Tuned)**, pembatasan kapasitas (`max_depth=4, min_samples_leaf=15` pada Decision Tree; `max_depth=3, n_estimators=150, learning_rate=0.03, reg_lambda=5.0` pada XGBoost) memangkas *Train–Test gap* menjadi **`0.0165`** (DT) dan **`0.0843`** (XGBoost).
+* **Faktor Klinis Dominan (`fig6_feature_importance.pdf`):**
+  * Seluruh model sepakat bahwa **Plasma Glucose** (47,5%–51,7% bobot), **BMI**, dan **Age** adalah penentu utama diagnosis diabetes.
 * **Rekomendasi Pemilihan Model:**
-  * **XGBoost (Tuned)** dipilih sebagai model terbaik untuk **probabilistic clinical risk stratification** karena unggul pada **5-Fold CV F1 (`0.7121`)**, **Test ROC-AUC (`0.8224`)**, dan **Test PR-AUC (`0.7125`)**.
-  * **Decision Tree (Tuned, `max_depth=4`)** sangat ideal untuk **skrining cepat berbasis aturan yang mudah diinterpretasi dokter** karena mencapai **Sensitivity `79,63%`** (hanya 11 *False Negative* dari 54 pasien) dan **Test F1 `0.7049`** dengan *overfitting gap* terkecil (`0.0165`).
+  * **XGBoost (Tuned)** dipilih untuk **pemeringkatan risiko klinis lintas ambang batas** karena unggul pada **Test ROC-AUC (`0.8180`)** dan **Test PR-AUC (`0.7077`)**, dengan **Sensitivity (`79,63%`)**, **CV F1 (`0.7078`)**, dan *gap* yang jauh lebih rendah daripada Random Forest (`0.0843` vs `0.1587`).
+  * **Decision Tree (Tuned, `max_depth=4`)** ideal untuk **skrining cepat berbasis aturan yang mudah diinterpretasi dokter** karena mencapai **Sensitivity `79,63%`** (hanya 11 *False Negative* dari 54 pasien) dan **Test F1 `0.7049`** dengan *overfitting gap* terkecil (`0.0165`).
